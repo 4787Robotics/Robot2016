@@ -91,7 +91,7 @@ public class Robot extends SampleRobot {
 			pusherMaxAngle, pusherAnglePos, pusherAngleStep);
 	Servo camServo = new Servo(CAMSERVO_PWM);
 	Preferences prefs;
-
+	
 	public Robot() {
 
 		// Vision Dashboard code
@@ -100,23 +100,21 @@ public class Robot extends SampleRobot {
 
 		// The camera name (ex "cam0") can be found through the roborio web
 		// interface
-//		session = NIVision.IMAQdxOpenCamera("cam0",
-//				NIVision.IMAQdxCameraControlMode.CameraControlModeController);
-//		NIVision.IMAQdxConfigureGrab(session);
+		session = NIVision.IMAQdxOpenCamera("cam0",
+				NIVision.IMAQdxCameraControlMode.CameraControlModeController);
+		NIVision.IMAQdxConfigureGrab(session);
+		robotInit();
 
 	}
 
 	public void robotInit() {
-		NIVision.IMAQdxSetAttributeU32(session,
-				"AcquisitionAttributes::VideoMode", 93);
+		System.out.println("Tried setting color to white.");
 		fly1.changeControlMode(CANTalon.TalonControlMode.Speed);
 		fly2.changeControlMode(CANTalon.TalonControlMode.Speed);
 		fly1.set(0);
 		fly2.set(0);
 		fly1.setFeedbackDevice(FeedbackDevice.QuadEncoder);
 		fly2.setFeedbackDevice(FeedbackDevice.QuadEncoder);
-
-		sensorCheck();
 	}
 
 	/**
@@ -152,20 +150,10 @@ public class Robot extends SampleRobot {
 	// Run before auto starts. Used for pulling dashboard values to be used
 	// in the operation of the bot
 	public void autoInit() {
-		flyP = prefs.getDouble("Flywheels P", flyP);
-		flyI = prefs.getDouble("Flywheels I", flyI);
-		flyD = prefs.getDouble("Flywheels D", flyD);
-		trim = prefs.getDouble("Trim", 0); // defaults to 0 trim. -1 is all power to left, 1 is all power to right
-		autoPower = prefs.getDouble("Autonomous Power to Wheels", 0); // defaults
-																		// to NO
-																		// auto
-		autoTime = prefs.getDouble("Autonomous time before stop", 0); // defaults
-																		// to NO
-																		// auto
-		alliance = prefs.getBoolean("Red Alliance", false); // defaults to blue
-															// alliance
-		//serial.writeString("G#FFFFFF:#" + (alliance ? "FF0000" : "0000FF")
-				//+ ":15"); // Gradient at beginning of auto
+		trim = 0;
+		autoPower = .6;
+		autoTime = 3;
+		alliance = false;
 	}
 
 	public void autonomous() {
@@ -190,24 +178,22 @@ public class Robot extends SampleRobot {
 	 */
 	public void operatorControl() {
 		allianceColor = alliance ? "FF0000" : "0000FF";
-//		serial.writeString("V#" + allianceColor);
+		//serial.writeString("V#" + allianceColor);
 		//NIVision.IMAQdxStartAcquisition(session);
 		initializeMechanism();
 
 		while (isOperatorControl() && isEnabled()) {
 
 			//NIVision.IMAQdxGrab(session, frame, 1);
-			//CameraServer.getInstance().setImage(frame);
 
 			x = drivestick.getX();
 			y = drivestick.getY();
-			mechX = mechstick.getX();
-			mechY = mechstick.getY();
 			z = drivestick.getZ();
 
 			if (Math.abs(x) > DEADZONEX || Math.abs(y) > DEADZONEY) {
-				trimRight = Math.signum(trim) > 0 ? 1-trim : 1;
-				trimLeft = Math.signum(trim) < 0 ? 1-Math.abs(trim) : 1;
+				//trimRight = Math.signum(trim) > 0 ? 1-trim : 1;
+				//trimLeft = Math.signum(trim) < 0 ? 1-Math.abs(trim) : 1;
+				trimRight = trimLeft = 1;
 				if (!drivestick.getRawButton(WHEELIE_BTN)) {
 					bogieLeft1.set(trimLeft*(x + -y));
 					bogieLeft2.set(trimLeft*(x + -y)); // these two need to be reversed
@@ -253,8 +239,6 @@ public class Robot extends SampleRobot {
 					rearRightDisable = !rearRightDisable;
 				}
 			}
-
-			camServo.setAngle(z * 90 + 180);
 			
 
 			boolean flyOutButton = mechstick.getRawButton(FLYOUT_BTN);
@@ -267,17 +251,17 @@ public class Robot extends SampleRobot {
 				if (fireButton) {
 					ballPusher.stepFwd();
 				}
-//				serial.writeString("F#FFFFFF:#" + allianceColor +":.4");
+				//serial.writeString("F#FFFFFF:#" + allianceColor +":.4");
 			} else if (flyInButton) {
 				fly1.set(FLYWHEELS_GRABRATE);// not sure which should be + and -
 				fly2.set(-FLYWHEELS_GRABRATE);
 				ballPusher.stepBwd();
-//				serial.writeString("F#FFFFFF:#" + allianceColor +":.4");
+				//serial.writeString("F#FFFFFF:#" + allianceColor +":.4");
 			}
 
 			else {
 				//while not shooting
-//				serial.writeString("V#" + allianceColor);
+				//serial.writeString("V#" + allianceColor);
 				fly1.set(0);
 				fly2.set(0);
 				ballPusher.stepBwd();
@@ -305,28 +289,28 @@ public class Robot extends SampleRobot {
 
 	
 
-//	SpeedController[] motorList = { bogieLeft1, bogieLeft2, backLeft,
-//			backRight, bogieRight1, bogieRight2 };
-//
-//	public void test() {
-//		while (isTest() && isEnabled()) { 
-//			SmartDashboard.putNumber("Test Motor: ", motorSwitch);
-//			y = drivestick.getY();
-//			if (drivestick.getRawButton(1)) {
-//				if ((Timer.getFPGATimestamp() - lastTime) > .5) {
-//					motorList[motorSwitch].set(0);
-//					lastTime = Timer.getFPGATimestamp();
-//					motorSwitch = (motorSwitch + 1) % motorList.length;
-//					System.out.println("Test Motor: " + motorSwitch);
-//				}
-//			}
-//
-//			if (Math.abs(y) > DEADZONEY) {
-//				motorList[motorSwitch].set(y);
-//			} else {
-//				motorList[motorSwitch].set(0);
-//			}
-//		}
-//	}
+	SpeedController[] motorList = { bogieLeft1, bogieLeft2, backLeft,
+			backRight, bogieRight1, bogieRight2 };
+
+	public void test() {
+		while (isTest() && isEnabled()) {
+			SmartDashboard.putNumber("Test Motor: ", motorSwitch);
+			y = drivestick.getY();
+			if (drivestick.getRawButton(1)) {
+				if ((Timer.getFPGATimestamp() - lastTime) > .5) {
+					motorList[motorSwitch].set(0);
+					lastTime = Timer.getFPGATimestamp();
+					motorSwitch = (motorSwitch + 1) % motorList.length;
+					System.out.println("Test Motor: " + motorSwitch);
+				}
+			}
+
+			if (Math.abs(y) > DEADZONEY) {
+				motorList[motorSwitch].set(y);
+			} else {
+				motorList[motorSwitch].set(0);
+			}
+		}
+	}
 
 }
