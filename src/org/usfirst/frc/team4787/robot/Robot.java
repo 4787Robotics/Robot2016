@@ -22,26 +22,21 @@ import com.ni.vision.NIVision.ImageType;
 public class Robot extends SampleRobot {
 
 	// CANs, PWMs, USB slots, button config
-	final int ANG_CAN = 1, FLY2_CAN = 2, FLY1_CAN = 0;
-	final int BOGLEFT1_PWM = 0, BOGLEFT2_PWM = 1, BLEFT_PWM = 2,
-			BRIGHT_PWM = 3, BOGRIGHT1_PWM = 4, BOGRIGHT2_PWM = 5;
+	final int ANG_CAN = 0, FLY2_CAN = 0, FLY1_CAN = 1;
+	final int BOGLEFT1_PWM = 0, BOGLEFT2_PWM = 1, BLEFT_PWM = 2, BRIGHT_PWM = 3, BOGRIGHT1_PWM = 4, BOGRIGHT2_PWM = 5;
 	final int JOYSTICK_USB = 0, MECHSTICK_USB = 1;
 	final int MECHSERVO_PWM = 9, CAMSERVO_PWM = 6;
-	final int FIRE_BTN = 5, FLYIN_BTN = 2, FLYOUT_BTN = 3, 
-			WHEELIE_BTN = 1, RLEFT_BTN = 7, RRIGHT_BTN = 8;
+	final int FIRE_BTN = 5, FLYIN_BTN = 2, FLYOUT_BTN = 3, WHEELIE_BTN = 1, RLEFT_BTN = 7, RRIGHT_BTN = 8;
 
 	// mechanical configuration and constants
-	final int FLYWHEELS_SHOOTRATE = 300, FLYWHEELS_GRABRATE = -30;
-	double pusherAnglePos = 00, pusherMinAngle = -5, pusherMaxAngle = 80,
-			pusherAngleStep = .6;
+	double pusherAnglePos = 00, pusherMinAngle = -5, pusherMaxAngle = 80, pusherAngleStep = .6;
 	double mechScaleFactor = 0.01, mechPos, mechNext;
 	double mechMinLimit = 0.05, mechMaxLimit = 0.8; // NOT REAL VALUES
 	final int PULSE_REVS = 1316; // 188:1 gear ratio and 7 pulses for 1316
 
 	// testing parameters and cooldowns
 	int motorSwitch = 0;
-	double lastTime = 0, rearLeftCooldown = 0,
-			rearRightCooldown = 0; // cooldowns
+	double lastTime = 0, rearLeftCooldown = 0, rearRightCooldown = 0; // cooldowns
 	final double COOLTIME = .5;
 
 	boolean rearLeftDisable = false, rearRightDisable = false;
@@ -58,11 +53,6 @@ public class Robot extends SampleRobot {
 	// Deadzones, ramprates
 	final double DEADZONEX = 0.05, DEADZONEY = 0.05;
 
-	// PID values for angler and flywheels
-	double flyP = 2;
-	double flyI = 0;
-	double flyD = 0;
-
 	// Motor and joystick initializations
 	CANTalon fly1 = new CANTalon(FLY1_CAN);
 	CANTalon fly2 = new CANTalon(FLY2_CAN);
@@ -73,8 +63,10 @@ public class Robot extends SampleRobot {
 	Victor backRight = new Victor(BRIGHT_PWM);
 	Talon bogieRight1 = new Talon(BOGRIGHT1_PWM);
 	Talon bogieRight2 = new Talon(BOGRIGHT2_PWM);
-//	//SerialPort serial = new SerialPort(19200, SerialPort.Port.kOnboard); // onboard
-																			// serial
+	
+	// SerialPort serial = new SerialPort(19200, SerialPort.Port.kOnboard); //
+	// onboard
+	// serial
 	/*
 	 * HOW TO USE: write newline terminated strings with particular format:
 	 * V#XXXXXX for solid color (where X is hex code) G#XXXXXX:#YYYYYY:T for
@@ -87,11 +79,11 @@ public class Robot extends SampleRobot {
 	Joystick drivestick = new Joystick(JOYSTICK_USB);
 	Joystick mechstick = new Joystick(MECHSTICK_USB);
 
-	ServoWrapper ballPusher = new ServoWrapper(MECHSERVO_PWM, pusherMinAngle,
-			pusherMaxAngle, pusherAnglePos, pusherAngleStep);
+	ServoWrapper ballPusher = new ServoWrapper(MECHSERVO_PWM, pusherMinAngle, pusherMaxAngle, pusherAnglePos,
+			pusherAngleStep);
 	Servo camServo = new Servo(CAMSERVO_PWM);
 	Preferences prefs;
-	
+
 	public Robot() {
 
 		// Vision Dashboard code
@@ -100,51 +92,8 @@ public class Robot extends SampleRobot {
 
 		// The camera name (ex "cam0") can be found through the roborio web
 		// interface
-		session = NIVision.IMAQdxOpenCamera("cam0",
-				NIVision.IMAQdxCameraControlMode.CameraControlModeController);
+		session = NIVision.IMAQdxOpenCamera("cam0", NIVision.IMAQdxCameraControlMode.CameraControlModeController);
 		NIVision.IMAQdxConfigureGrab(session);
-		robotInit();
-
-	}
-
-	public void robotInit() {
-		System.out.println("Tried setting color to white.");
-		fly1.changeControlMode(CANTalon.TalonControlMode.Speed);
-		fly2.changeControlMode(CANTalon.TalonControlMode.Speed);
-		fly1.set(0);
-		fly2.set(0);
-		fly1.setFeedbackDevice(FeedbackDevice.QuadEncoder);
-		fly2.setFeedbackDevice(FeedbackDevice.QuadEncoder);
-	}
-
-	/**
-	 * Sanity check for the encoders
-	 */
-	public void sensorCheck() {
-		FeedbackDeviceStatus status1 = fly1
-				.isSensorPresent(FeedbackDevice.QuadEncoder);
-		FeedbackDeviceStatus status2 = fly2
-				.isSensorPresent(FeedbackDevice.QuadEncoder);
-
-		switch (status1) {
-		case FeedbackStatusPresent:
-			System.out.println("Fly1 sensor functional");
-
-		case FeedbackStatusNotPresent:
-			System.out.println("Fly1 sensor nonfunctional");
-			// terminate robot? or just a warning?
-		case FeedbackStatusUnknown:
-			System.out.println("Fly1 sensor status unknown");
-		}
-		switch (status2) {
-		case FeedbackStatusPresent:
-			System.out.println("Fly2 sensor functional");
-		case FeedbackStatusNotPresent:
-			System.out.println("Fly2 sensor nonfunctional");
-			// terminate robot? or just a warning?
-		case FeedbackStatusUnknown:
-			System.out.println("Fly2 sensor status unknown");
-		}
 	}
 
 	// Run before auto starts. Used for pulling dashboard values to be used
@@ -178,27 +127,25 @@ public class Robot extends SampleRobot {
 	 */
 	public void operatorControl() {
 		allianceColor = alliance ? "FF0000" : "0000FF";
-		//serial.writeString("V#" + allianceColor);
-		//NIVision.IMAQdxStartAcquisition(session);
-		initializeMechanism();
+		// serial.writeString("V#" + allianceColor);
+		NIVision.IMAQdxStartAcquisition(session);
+		// initializeMechanism();
 
 		while (isOperatorControl() && isEnabled()) {
 
-			//NIVision.IMAQdxGrab(session, frame, 1);
+			NIVision.IMAQdxGrab(session, frame, 1);
 
 			x = drivestick.getX();
 			y = drivestick.getY();
 			z = drivestick.getZ();
 
 			if (Math.abs(x) > DEADZONEX || Math.abs(y) > DEADZONEY) {
-				//trimRight = Math.signum(trim) > 0 ? 1-trim : 1;
-				//trimLeft = Math.signum(trim) < 0 ? 1-Math.abs(trim) : 1;
 				trimRight = trimLeft = 1;
 				if (!drivestick.getRawButton(WHEELIE_BTN)) {
-					bogieLeft1.set(trimLeft*(x + -y));
-					bogieLeft2.set(trimLeft*(x + -y)); // these two need to be reversed
-					bogieRight1.set(trimRight*(x + y));
-					bogieRight2.set(trimRight*(x + y));
+					bogieLeft1.set(trimLeft * (x + -y));
+					bogieLeft2.set(trimLeft * (x + -y)); // these two need to be reversed
+					bogieRight1.set(trimRight * (x + y));
+					bogieRight2.set(trimRight * (x + y));
 				} else {
 					bogieLeft1.set(0);
 					bogieLeft2.set(0);
@@ -206,17 +153,16 @@ public class Robot extends SampleRobot {
 					bogieRight2.set(0);
 				}
 				if (!rearLeftDisable) {
-					backLeft.set(trimLeft*(x - y));
+					backLeft.set(trimLeft * (x - y));
 				} else {
 					backLeft.set(0);
 				}
 				if (!rearRightDisable) {
-					backRight.set(trimRight*(x + y));
+					backRight.set(trimRight * (x + y));
 				} else {
 					backRight.set(0);
 				}
 			} else {
-				// THIS IS IN THEIR PWM ORDER!!! DO NOT REORDER
 				bogieLeft1.set(0);
 				bogieLeft2.set(0);
 				backLeft.set(0);
@@ -227,41 +173,38 @@ public class Robot extends SampleRobot {
 
 			// cooldown
 
-
-
-			if (mechstick.getRawButton(RLEFT_BTN)) { // replace magic number
+			if (mechstick.getRawButton(RLEFT_BTN)) { 
 				if ((Timer.getFPGATimestamp() - rearLeftCooldown) > COOLTIME) {
 					rearLeftDisable = !rearLeftDisable;
 				}
 			}
-			if (mechstick.getRawButton(RRIGHT_BTN)) { // replace magic number
+			if (mechstick.getRawButton(RRIGHT_BTN)) { 
 				if ((Timer.getFPGATimestamp() - rearRightCooldown) > COOLTIME) {
 					rearRightDisable = !rearRightDisable;
 				}
 			}
-			
 
-			boolean flyOutButton = mechstick.getRawButton(FLYOUT_BTN);
-			boolean flyInButton = mechstick.getRawButton(FLYIN_BTN);
-			boolean fireButton = mechstick.getRawButton(FIRE_BTN);
+			boolean flyOutButton = drivestick.getRawButton(FLYOUT_BTN);
+			boolean flyInButton = drivestick.getRawButton(FLYIN_BTN);
+			boolean fireButton = drivestick.getRawButton(FIRE_BTN);
 
 			if (flyOutButton) {
-				fly1.set(FLYWHEELS_SHOOTRATE);// don't know what to set it to
-				fly2.set(-FLYWHEELS_SHOOTRATE);
+				fly1.set(0.6);// don't know what to set it to
+				fly2.set(-0.6);
 				if (fireButton) {
 					ballPusher.stepFwd();
 				}
-				//serial.writeString("F#FFFFFF:#" + allianceColor +":.4");
+				// serial.writeString("F#FFFFFF:#" + allianceColor +":.4");
 			} else if (flyInButton) {
-				fly1.set(FLYWHEELS_GRABRATE);// not sure which should be + and -
-				fly2.set(-FLYWHEELS_GRABRATE);
+				fly1.set(-0.4);// not sure which should be + and -
+				fly2.set(0.4);
 				ballPusher.stepBwd();
-				//serial.writeString("F#FFFFFF:#" + allianceColor +":.4");
+				// serial.writeString("F#FFFFFF:#" + allianceColor +":.4");
 			}
 
 			else {
-				//while not shooting
-				//serial.writeString("V#" + allianceColor);
+				// while not shooting
+				// serial.writeString("V#" + allianceColor);
 				fly1.set(0);
 				fly2.set(0);
 				ballPusher.stepBwd();
@@ -276,21 +219,16 @@ public class Robot extends SampleRobot {
 	 * robotInit but it's done redundantly so as to apply changes to the PID
 	 * constants as well as the control modes.
 	 */
-	private void initializeMechanism() {
-		fly1.changeControlMode(CANTalon.TalonControlMode.Speed);
-		fly2.changeControlMode(CANTalon.TalonControlMode.Speed);
-		fly1.setPID(flyP, flyI, flyD);
-		fly1.setCloseLoopRampRate(0.0);
-		fly1.setIZone(0);
-		fly2.setPID(flyP, flyI, flyD);
-		fly2.setCloseLoopRampRate(0.0);
-		fly2.setIZone(0);
-	}
+	/*
+	 * private void initializeMechanism() {
+	 * fly1.changeControlMode(CANTalon.TalonControlMode.Speed);
+	 * fly2.changeControlMode(CANTalon.TalonControlMode.Speed);
+	 * fly1.setPID(flyP, flyI, flyD); fly1.setCloseLoopRampRate(0.0);
+	 * fly1.setIZone(0); fly2.setPID(flyP, flyI, flyD);
+	 * fly2.setCloseLoopRampRate(0.0); fly2.setIZone(0); }
+	 */
 
-	
-
-	SpeedController[] motorList = { bogieLeft1, bogieLeft2, backLeft,
-			backRight, bogieRight1, bogieRight2 };
+	SpeedController[] motorList = { bogieLeft1, bogieLeft2, backLeft, backRight, bogieRight1, bogieRight2 };
 
 	public void test() {
 		while (isTest() && isEnabled()) {
